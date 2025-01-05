@@ -14,7 +14,7 @@ from .. import (
 
 _LOGGER = logging.getLogger(__name__)
 CODEOWNERS = ["@jhansche"]
-DEPENDENCIES = ["bedjet"]
+DEPENDENCIES = ["bedjet_jpmv27"]
 
 BedJetFan = bedjet_ns.class_("BedJetFan", fan.Fan, cg.PollingComponent)
 

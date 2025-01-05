@@ -26,10 +26,91 @@ namespace espbt = esphome::esp32_ble_tracker;
 // Forward declare BedJetClient
 class BedJetClient;
 
+// GATT Attributes
+
+// Service - Generic Attribute Profile
+//   UUID: 00001801-0000-1000-8000-00805f9b34fb
+//   Primary: yes
+
+// Characteristic - Service Changed
+//   UUID: 00002a05-0000-1000-8000-00805f9b34fb
+//   Service: /org/bluez/hci0/dev_A0_DD_6C_94_94_C2/service0001
+//   Notifying: yes
+//   Flags: indicate
+//   MTU: 0x01f4
+
+// Service - Vendor specific
+//   UUID: 00001000-bed0-0080-aa55-4265644a6574
+//   Primary: yes
 static const espbt::ESPBTUUID BEDJET_SERVICE_UUID = espbt::ESPBTUUID::from_raw("00001000-bed0-0080-aa55-4265644a6574");
+
+// Characteristic - Vendor specific
+//   UUID: 00002000-bed0-0080-aa55-4265644a6574
+//   Service: /org/bluez/hci0/dev_A0_DD_6C_94_94_C2/service0028
+//   Value: 01 56 1b 01 00 00 00 27 3c 00 0b 00 00 14 50 00 00 26 00 12
+//   Notifying: no
+//   Flags: read
+//   Flags: write
+//   Flags: notify
+//   MTU: 0x01f4
+//
+// Read returns:   01 9a 01 10 15 00 14 15 00 00 99
+// Notify returns: 01 56 1b 01 00 00 00 27 3c 00 0b 00 00 14 50 00 00 26 00 12
+//
 static const espbt::ESPBTUUID BEDJET_STATUS_UUID = espbt::ESPBTUUID::from_raw("00002000-bed0-0080-aa55-4265644a6574");
-static const espbt::ESPBTUUID BEDJET_COMMAND_UUID = espbt::ESPBTUUID::from_raw("00002004-bed0-0080-aa55-4265644a6574");
+
+// Descriptor - Client Characteristic Configuration
+//   UUID: 00002902-0000-1000-8000-00805f9b34fb
+//   Characteristic: /org/bluez/hci0/dev_A0_DD_6C_94_94_C2/service0028/char0029
+//
+// Read returns: 00 00
+//
+
+// Characteristic - Vendor specific
+//   UUID: 00002001-bed0-0080-aa55-4265644a6574
+//   Service: /org/bluez/hci0/dev_A0_DD_6C_94_94_C2/service0028
+//   Value: 42 45 44 4a 45 54 2d 32 31 36 33                 BEDJET-2163
+//   Flags: read
+//   Flags: write
+//   MTU: 0x01f4
+//
+// Read returns: 42 45 44 4a 45 54 2d 32 31 36 33                 BEDJET-2163
+//
 static const espbt::ESPBTUUID BEDJET_NAME_UUID = espbt::ESPBTUUID::from_raw("00002001-bed0-0080-aa55-4265644a6574");
+
+// Characteristic - Vendor specific
+//   UUID: 00002002-bed0-0080-aa55-4265644a6574
+//   Service: /org/bluez/hci0/dev_A0_DD_6C_94_94_C2/service0028
+//   Flags: read
+//   Flags: write
+//   MTU: 0x01f4
+
+// Characteristic - Vendor specific
+//   UUID: 00002003-bed0-0080-aa55-4265644a6574
+//   Service: /org/bluez/hci0/dev_A0_DD_6C_94_94_C2/service0028
+//   Flags: write
+//   MTU: 0x01f4
+
+// Characteristic - Vendor specific
+//   UUID: 00002004-bed0-0080-aa55-4265644a6574
+//   Service: /org/bluez/hci0/dev_A0_DD_6C_94_94_C2/service0028
+//   Flags: write
+//   MTU: 0x01f4
+static const espbt::ESPBTUUID BEDJET_COMMAND_UUID = espbt::ESPBTUUID::from_raw("00002004-bed0-0080-aa55-4265644a6574");
+
+// Characteristic - Vendor specific
+//   UUID: 00002005-bed0-0080-aa55-4265644a6574
+//   Service: /org/bluez/hci0/dev_A0_DD_6C_94_94_C2/service0028
+//   Flags: read
+//   Flags: write
+//   MTU: 0x01f4
+
+// Characteristic - Vendor specific
+//   UUID: 00002006-bed0-0080-aa55-4265644a6574
+//   Service: /org/bluez/hci0/dev_A0_DD_6C_94_94_C2/service0028
+//   Flags: read
+//   Flags: write
+//   MTU: 0x01f4
 
 /**
  * Hub component connecting to the BedJet device over Bluetooth.

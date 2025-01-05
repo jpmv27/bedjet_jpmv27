@@ -62,6 +62,17 @@ enum BedjetButton : uint8_t {
   /// Enter Extended Heat mode (limited to 10 hours)
   BTN_EXTHT = 0x6,
 
+  /// From https://github.com/robert-friedland/ha-bedjet/blob/main/custom_components/ha_bedjet/const.py
+  /// and https://github.com/pjt0620/Home-Assistant-Bedjet/blob/main/bedjet.py
+  BTN_FAN_UP = 0x10,
+  BTN_FAN_DOWN = 0x11,
+  BTN_TEMP_UP = 0x12,
+  BTN_TEMP_DOWN = 0x13,
+
+  // BTN_TIME_UP = 0x??
+  // BTN_TIME_DOWN = 0x??
+  // BTN_10H = 0x??
+
   /// Start the M1 biorhythm/preset program
   BTN_M1 = 0x20,
   /// Start the M2 biorhythm/preset program

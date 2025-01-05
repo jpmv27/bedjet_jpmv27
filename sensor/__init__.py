@@ -17,10 +17,13 @@ from .. import (
 
 _LOGGER = logging.getLogger(__name__)
 CODEOWNERS = ["@jhansche", "@javawizard"]
-DEPENDENCIES = ["bedjet"]
+DEPENDENCIES = ["bedjet_jpmv27"]
 
 CONF_OUTLET_TEMPERATURE = "outlet_temperature"
 CONF_AMBIENT_TEMPERATURE = "ambient_temperature"
+CONF_TARGET_TEMPERATURE = "target_temperature"
+CONF_MODE_MIN_TEMPERATURE = "mode_min_temperature"
+CONF_MODE_MAX_TEMPERATURE = "mode_max_temperature"
 
 BedjetSensor = bedjet_ns.class_("BedjetSensor", cg.Component)
 
@@ -33,6 +36,21 @@ CONFIG_SCHEMA = cv.Schema(
             state_class=STATE_CLASS_MEASUREMENT,
         ),
         cv.Optional(CONF_AMBIENT_TEMPERATURE): sensor.sensor_schema(
+            unit_of_measurement=UNIT_CELSIUS,
+            device_class=DEVICE_CLASS_TEMPERATURE,
+            state_class=STATE_CLASS_MEASUREMENT,
+        ),
+        cv.Optional(CONF_TARGET_TEMPERATURE): sensor.sensor_schema(
+            unit_of_measurement=UNIT_CELSIUS,
+            device_class=DEVICE_CLASS_TEMPERATURE,
+            state_class=STATE_CLASS_MEASUREMENT,
+        ),
+        cv.Optional(CONF_MODE_MIN_TEMPERATURE): sensor.sensor_schema(
+            unit_of_measurement=UNIT_CELSIUS,
+            device_class=DEVICE_CLASS_TEMPERATURE,
+            state_class=STATE_CLASS_MEASUREMENT,
+        ),
+        cv.Optional(CONF_MODE_MAX_TEMPERATURE): sensor.sensor_schema(
             unit_of_measurement=UNIT_CELSIUS,
             device_class=DEVICE_CLASS_TEMPERATURE,
             state_class=STATE_CLASS_MEASUREMENT,
@@ -53,3 +71,15 @@ async def to_code(config):
     if ambient_temperature_sensor := config.get(CONF_AMBIENT_TEMPERATURE):
         sensor_var = await sensor.new_sensor(ambient_temperature_sensor)
         cg.add(var.set_ambient_temperature_sensor(sensor_var))
+
+    if target_temperature_sensor := config.get(CONF_TARGET_TEMPERATURE):
+        sensor_var = await sensor.new_sensor(target_temperature_sensor)
+        cg.add(var.set_target_temperature_sensor(sensor_var))
+
+    if mode_min_temperature_sensor := config.get(CONF_MODE_MIN_TEMPERATURE):
+        sensor_var = await sensor.new_sensor(mode_min_temperature_sensor)
+        cg.add(var.set_mode_min_temperature_sensor(sensor_var))
+
+    if mode_max_temperature_sensor := config.get(CONF_MODE_MAX_TEMPERATURE):
+        sensor_var = await sensor.new_sensor(mode_max_temperature_sensor)
+        cg.add(var.set_mode_max_temperature_sensor(sensor_var))

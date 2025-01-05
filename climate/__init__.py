@@ -18,7 +18,7 @@ from .. import (
 
 _LOGGER = logging.getLogger(__name__)
 CODEOWNERS = ["@jhansche"]
-DEPENDENCIES = ["bedjet"]
+DEPENDENCIES = ["bedjet_jpmv27"]
 
 BedJetClimate = bedjet_ns.class_("BedJetClimate", climate.Climate, cg.PollingComponent)
 BedjetHeatMode = bedjet_ns.enum("BedjetHeatMode")
