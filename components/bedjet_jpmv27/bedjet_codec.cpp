@@ -6,7 +6,7 @@ namespace esphome {
 namespace bedjet {
 
 /// Log the contents of a variable length packet as hex bytes
-void logDHexPacket(const char* label, const uint8_t* buf, size_t length) {
+void logIHexPacket(const char* label, const uint8_t* buf, size_t length) {
     char output[(length * 3) + 1];
 
     size_t offset = 0;
@@ -14,7 +14,7 @@ void logDHexPacket(const char* label, const uint8_t* buf, size_t length) {
         offset += sprintf(output + offset, "%02X ", buf[i]);
     }
 
-	ESP_LOGD(TAG, "%s (%d bytes): %s", label, length, output);
+	ESP_LOGI(TAG, "%s (%d bytes): %s", label, length, output);
 }
 
 /// Converts a BedJet temp step into degrees Fahrenheit.
@@ -80,7 +80,7 @@ BedjetPacket *BedjetCodec::get_set_runtime_remaining_request(const uint8_t hour,
 
 /** Decodes the extra bytes that were received after being notified with a partial packet. */
 void BedjetCodec::decode_extra(const uint8_t *data, uint16_t length) {
-  logDHexPacket("Read extra bytes", data, length);
+  logIHexPacket("Read extra bytes", data, length);
   uint8_t offset = this->last_buffer_size_;
   if (offset > 0 && length + offset <= sizeof(BedjetStatusPacket)) {
     memcpy(((uint8_t *) (&this->buf_)) + offset, data, length);
@@ -98,7 +98,7 @@ bool BedjetCodec::decode_notify(const uint8_t *data, uint16_t length) {
   ESP_LOGV(TAG, "Received: %d bytes: %d %d %d %d", length, data[0], data[1], data[2], data[3]);
 
   if (data[1] == PACKET_FORMAT_V3_HOME && data[3] == PACKET_TYPE_STATUS) {
-    logDHexPacket("Received STATUS packet", data, length);
+    logIHexPacket("Received STATUS packet", data, length);
     // Clear old buffer
     memset(&this->buf_, 0, sizeof(BedjetStatusPacket));
     // Copy new data into buffer
@@ -119,10 +119,10 @@ bool BedjetCodec::decode_notify(const uint8_t *data, uint16_t length) {
     }
   } else if (data[1] == PACKET_FORMAT_DEBUG || data[3] == PACKET_TYPE_DEBUG) {
     // We don't actually know the packet format for this. Dump packets to log, in case a pattern presents itself.
-    logDHexPacket("Received DEBUG packet", data, length);
+    logIHexPacket("Received DEBUG packet", data, length);
   } else {
     // TODO: log a warning if we detect that we connected to a non-V3 device.
-    logDHexPacket("Received UNKNOWN packet", data, length);
+    logIHexPacket("Received UNKNOWN packet", data, length);
   }
 
   return false;
