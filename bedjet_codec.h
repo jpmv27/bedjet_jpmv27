@@ -36,93 +36,149 @@ enum BedjetNotification : uint8_t {
 };
 
 /** The format of a BedJet V3 status packet. */
+
+// Ubertooth capture of a notification packet
+//
+// [Data Header].......................[BLE LINK LAYER PDU]....................................[CRC]
+// flags                                                                                       |
+// |  length = 27                                                                              |
+// |  |   [L2CAP PDU]                                                                          |
+// |  |   length = 23                                                                          |
+// |  |   |  CID = 0x0004 (ATT)                                                                |
+// |  |   |  |        [ATT PDU]                                                                |
+// |  |   |  |        opcode = Handle Value Notification                                       |
+// |  |   |  |        |  handle = 0x002a (unknown)                                             |
+// |  |   |  |        |  |      [BedJet PDU]                                                   |
+// |  |   |  |        |  |      is-partial = yes                                               |
+// |  |   |  |        |  |      |  format = V3-home                                            |
+// |  |   |  |        |  |      |  |  total length = 27                                        |
+// |  |   |  |        |  |      |  |  |  type = status                                         |
+// |  |   |  |        |  |      |  |  |  |  remaining HH:MM:SS                                 |
+// |  |   |  |        |  |      |  |  |  |  |        actual temp = 20C                         |
+// |  |   |  |        |  |      |  |  |  |  |        |  target temp = 32C                      |
+// |  |   |  |        |  |      |  |  |  |  |        |  |  mode = standby                      |
+// |  |   |  |        |  |      |  |  |  |  |        |  |  |  fan speed = 60%                  |
+// |  |   |  |        |  |      |  |  |  |  |        |  |  |  |  max runtime HH:MM             |
+// |  |   |  |        |  |      |  |  |  |  |        |  |  |  |  |     min temp = 10C          |
+// |  |   |  |        |  |      |  |  |  |  |        |  |  |  |  |     |  max temp = 40C       |
+// |  |   |  |        |  |      |  |  |  |  |        |  |  |  |  |     |  |  turbo time (HH:MM?)
+// |  |   |  |        |  |      |  |  |  |  |        |  |  |  |  |     |  |  |     ambient temp = 20C
+// |  |   |  |        |  |      |  |  |  |  |        |  |  |  |  |     |  |  |     |  shutdown reason
+// |  |   |  |        |  |      |  |  |  |  |        |  |  |  |  |     |  |  |     |  |  ?     |
+// |  |   |  |        |  |      |  |  |  |  |        |  |  |  |  |     |  |  |     |  |  |     |
+// V  V   V  V        V  V      V  V  V  V  V        V  V  V  V  V     V  V  V     V  V  V     V
+// 06 1b {17 00 04 00 1b 2a 00 [01 56 1b 01 00 00 00 28 40 00 0b 00 00 14 50 00 00 28 00 12]} {db c4 95}
+
 struct BedjetStatusPacket {
-  // [0]
-  bool is_partial : 8;  ///< `1` indicates that this is a partial packet, and more data can be read directly from the
-                        ///< characteristic.
-  BedjetPacketFormat packet_format : 8;  ///< BedjetPacketFormat::PACKET_FORMAT_V3_HOME for BedJet V3 status packet
-                                         ///< format. BedjetPacketFormat::PACKET_FORMAT_DEBUG for debugging packets.
-  uint8_t expecting_length : 8;      ///< The expected total length of the status packet after merging the extra packet.
-  BedjetPacketType packet_type : 8;  ///< Typically BedjetPacketType::PACKET_TYPE_STATUS for BedJet V3 status packet.
+  // [ 0]
+  bool is_partial : 8;                      ///< `1` indicates that this is a partial packet, and more data can be read directly from the
+                                            ///< characteristic.
+  // [ 1]
+  BedjetPacketFormat packet_format : 8;     ///< BedjetPacketFormat::PACKET_FORMAT_V3_HOME for BedJet V3 status packet
+                                            ///< format. BedjetPacketFormat::PACKET_FORMAT_DEBUG for debugging packets.
+  // [ 2]
+  uint8_t expecting_length : 8;             ///< The expected total length of the status packet after merging the extra packet.
+                                            ///< (mine says 27)
+  // [ 3]
+  BedjetPacketType packet_type : 8;         ///< Typically BedjetPacketType::PACKET_TYPE_STATUS for BedJet V3 status packet.
 
-  // [4]
-  uint8_t time_remaining_hrs : 8;   ///< Hours remaining in program runtime
-  uint8_t time_remaining_mins : 8;  ///< Minutes remaining in program runtime
-  uint8_t time_remaining_secs : 8;  ///< Seconds remaining in program runtime
+  // [ 4]
+  uint8_t time_remaining_hrs : 8;           ///< Hours remaining in program runtime
+  // [ 5]
+  uint8_t time_remaining_mins : 8;          ///< Minutes remaining in program runtime
+  // [ 6]
+  uint8_t time_remaining_secs : 8;          ///< Seconds remaining in program runtime
 
-  // [7]
-  uint8_t actual_temp_step : 8;  ///< Actual temp of the air blown by the BedJet fan; value represents `2 *
-                                 ///< degrees_celsius`. See #bedjet_temp_to_c and #bedjet_temp_to_f
-  uint8_t target_temp_step : 8;  ///< Target temp that the BedJet will try to heat to. See #actual_temp_step.
+  // [ 7]
+  uint8_t actual_temp_step : 8;             ///< Actual temp of the air blown by the BedJet fan; value represents `2 *
+                                            ///< degrees_celsius`. See #bedjet_temp_to_c and #bedjet_temp_to_f
+  // [ 8]
+  uint8_t target_temp_step : 8;             ///< Target temp that the BedJet will try to heat to. See #actual_temp_step.
 
-  // [9]
-  BedjetMode mode : 8;  ///< BedJet operating mode.
+  // [ 9]
+  BedjetMode mode : 8;                      ///< BedJet operating mode.
 
   // [10]
-  uint8_t fan_step : 8;  ///< BedJet fan speed; value is in the 0-19 range, representing 5% increments (5%-100%): `5 + 5
-                         ///< * fan_step`
-  uint8_t max_hrs : 8;   ///< Max hours of mode runtime
-  uint8_t max_mins : 8;  ///< Max minutes of mode runtime
-  uint8_t min_temp_step : 8;  ///< Min temp allowed in mode. See #actual_temp_step.
-  uint8_t max_temp_step : 8;  ///< Max temp allowed in mode. See #actual_temp_step.
+  uint8_t fan_step : 8;                     ///< BedJet fan speed; value is in the 0-19 range, representing 5% increments (5%-100%): `5 + 5
+                                            ///< * fan_step`
+  // [11]
+  uint8_t max_hrs : 8;                      ///< Max hours of mode runtime
+  // [12]
+  uint8_t max_mins : 8;                     ///< Max minutes of mode runtime
+  // [13]
+  uint8_t min_temp_step : 8;                ///< Min temp allowed in mode. See #actual_temp_step.
+  // [14]
+  uint8_t max_temp_step : 8;                ///< Max temp allowed in mode. See #actual_temp_step.
 
   // [15-16]
-  uint16_t turbo_time : 16;  ///< Time remaining in BedjetMode::MODE_TURBO.
+  uint16_t turbo_time : 16;                 ///< Time remaining in BedjetMode::MODE_TURBO.
 
   // [17]
-  uint8_t ambient_temp_step : 8;  ///< Current ambient air temp. This is the coldest air the BedJet can blow. See
-                                  ///< #actual_temp_step.
-  uint8_t shutdown_reason : 8;    ///< The reason for the last device shutdown.
+  uint8_t ambient_temp_step : 8;            ///< Current ambient air temp. This is the coldest air the BedJet can blow. See
+                                            ///< #actual_temp_step.
+  // [18]
+  uint8_t shutdown_reason : 8;              ///< The reason for the last device shutdown.
 
-  // [19-25]; the initial partial packet cuts off here after [19]
+  // Something is not right after this point. My notification packet has an extra byte,
+  // and my read packet starts with an 0x01. But my expected length is 27 and the total
+  // size of notification packet and read packet is 20 + 11 = 31. Are some bytes in the
+  // read packet some kind of framing?
 
-  uint8_t unused_1 : 8;  // Unknown [19] = 0x01
-  uint8_t unused_2 : 8;  // Unknown [20] = 0x81
-  uint8_t unused_3 : 8;  // Unknown [21] = 0x01
+  // [19]
+  uint8_t unknown_1 : 8;                    // Unknown = 0x01
 
-  // [22]: 0x2=is_dual_zone, ...?
+  // The notification partial packet cuts off here after [19]
+
+  // [20]
+  uint8_t unknown_2 : 8;                    // Unknown = 0x81
+  // [21]
+  uint8_t unknown_3 : 8;                    // Unknown = 0x01
+
+  // [22]                                   // Partial = 0x02
   struct {
-    int unused_1 : 1;       // 0x80
-    int unused_2 : 1;       // 0x40
-    int unused_3 : 1;       // 0x20
-    int unused_4 : 1;       // 0x10
-    int unused_5 : 1;       // 0x8
-    int unused_6 : 1;       // 0x4
-    bool is_dual_zone : 1;  /// Is part of a Dual Zone configuration
-    int unused_7 : 1;       // 0x1
-  } dual_zone_flags;        // NOLINT(clang-diagnostic-unaligned-access)
+    int unknown_1 : 1;       // 0x80
+    int unknown_2 : 1;       // 0x40
+    int unknown_3 : 1;       // 0x20
+    int unknown_4 : 1;       // 0x10
+    int unknown_5 : 1;       // 0x08
+    int unknown_6 : 1;       // 0x04
+    bool is_dual_zone : 1;   // 0x02        /// Is part of a Dual Zone configuration
+    int unknown_7 : 1;       // 0x01
+  } dual_zone_flags;                            // NOLINT(clang-diagnostic-unaligned-access)
 
-  uint8_t unused_4 : 8;  // Unknown 23-24 = 0x1310
-  uint8_t unused_5 : 8;  // Unknown 23-24 = 0x1310
-  uint8_t unused_6 : 8;  // Unknown 25 = 0x00
+  // [23-24]
+  uint8_t unknown_4 : 8;                    // Unknown = 0x1310
+  uint8_t unknown_5 : 8;
+  // [25]
+  uint8_t unknown_6 : 8;                    // Unknown = 0x00
 
   // [26]
-  //   0x18(24) = "Connection test has completed OK"
-  //   0x1a(26) = "Firmware update is not needed"
-  uint8_t update_phase : 8;  ///< The current status/phase of a firmware update.
+  uint8_t update_phase : 8;                 ///< The current status/phase of a firmware update.
+                                            ///<  0x18(24) = "Connection test has completed OK"
+                                            ///<  0x1a(26) = "Firmware update is not needed"
 
   // [27]
   union {
     uint8_t flags_packed;
     struct {
       /* uint8_t */
-      int unused_1 : 1;           // 0x80
-      int unused_2 : 1;           // 0x40
-      bool conn_test_passed : 1;  ///< (0x20) Bit is set `1` if the last connection test passed.
-      bool leds_enabled : 1;      ///< (0x10) Bit is set `1` if the LEDs on the device are enabled.
-      int unused_3 : 1;           // 0x08
-      bool units_setup : 1;       ///< (0x04) Bit is set `1` if the device's units have been configured.
-      int unused_4 : 1;           // 0x02
-      bool beeps_muted : 1;       ///< (0x01) Bit is set `1` if the device's sound output is muted.
+      int unknown_1 : 1;           // 0x80
+      int unknown_2 : 1;           // 0x40
+      bool conn_test_passed : 1;   // 0x20  ///< Bit is set `1` if the last connection test passed.
+      bool leds_enabled : 1;       // 0x10  ///< Bit is set `1` if the LEDs on the device are enabled.
+      int unknown_3 : 1;           // 0x08
+      bool units_setup : 1;        // 0x04  ///< Bit is set `1` if the device's units have been configured.
+      int unknown_4 : 1;           // 0x02
+      bool beeps_muted : 1;        // 0x01  ///< Bit is set `1` if the device's sound output is muted.
     } __attribute__((packed)) flags;
   };
 
-  // [28] = (biorhythm?) sequence step
-  uint8_t bio_sequence_step : 8;  /// Biorhythm sequence step number
-  // [29] = notify_code:
-  BedjetNotification notify_code : 8;  /// See BedjetNotification
+  // [28]
+  uint8_t bio_sequence_step : 8;            /// Biorhythm sequence step number
+  // [29]
+  BedjetNotification notify_code : 8;       /// See BedjetNotification
 
-  uint16_t unused_7 : 16;  // Unknown
+  uint16_t unknown_7 : 16;                  // Unknown
 
 } __attribute__((packed));
 
