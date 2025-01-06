@@ -30,8 +30,8 @@ enum BedjetNotification : uint8_t {
   NOTIFY_UPDATE = 2,                  ///< Firmware Update / A newer version of firmware is available.
   NOTIFY_UPDATE_FAIL = 3,             ///< Firmware Update / Unable to connect to the firmware update server.
   NOTIFY_BIO_FAIL_CLOCK_NOT_SET = 4,  ///< The specified sequence cannot be run because the clock is not set
-  NOTIFY_BIO_FAIL_TOO_LONG = 5,  ///< The specified sequence cannot be run because it contains steps that would be too
-                                 ///< long running from the current time.
+  NOTIFY_BIO_FAIL_TOO_LONG = 5,       ///< The specified sequence cannot be run because it contains steps that would be too
+                                      ///< long running from the current time.
   // Note: after handling a notification, send MAGIC_NOTIFY_ACK
 };
 
@@ -76,37 +76,47 @@ struct BedjetStatusPacket {
   // [ 1]
   BedjetPacketFormat packet_format : 8;     ///< BedjetPacketFormat::PACKET_FORMAT_V3_HOME for BedJet V3 status packet
                                             ///< format. BedjetPacketFormat::PACKET_FORMAT_DEBUG for debugging packets.
+
   // [ 2]
   uint8_t expecting_length : 8;             ///< The expected total length of the status packet after merging the extra packet.
-                                            ///< (mine says 27)
+                                            ///< (mine says 27). Perhaps the first four bytes are considered a packet header and
+                                            ///< not included in the length
+
   // [ 3]
   BedjetPacketType packet_type : 8;         ///< Typically BedjetPacketType::PACKET_TYPE_STATUS for BedJet V3 status packet.
 
   // [ 4]
   uint8_t time_remaining_hrs : 8;           ///< Hours remaining in program runtime
+
   // [ 5]
   uint8_t time_remaining_mins : 8;          ///< Minutes remaining in program runtime
+
   // [ 6]
   uint8_t time_remaining_secs : 8;          ///< Seconds remaining in program runtime
 
   // [ 7]
   uint8_t actual_temp_step : 8;             ///< Actual temp of the air blown by the BedJet fan; value represents `2 *
                                             ///< degrees_celsius`. See #bedjet_temp_to_c and #bedjet_temp_to_f
+
   // [ 8]
   uint8_t target_temp_step : 8;             ///< Target temp that the BedJet will try to heat to. See #actual_temp_step.
 
   // [ 9]
-  BedjetMode mode : 8;                      ///< BedJet operating mode.
+  BedjetMode mode : 8;                      ///< BedJet operating mode. See enum BedjetMode
 
   // [10]
   uint8_t fan_step : 8;                     ///< BedJet fan speed; value is in the 0-19 range, representing 5% increments (5%-100%): `5 + 5
                                             ///< * fan_step`
+
   // [11]
   uint8_t max_hrs : 8;                      ///< Max hours of mode runtime
+
   // [12]
   uint8_t max_mins : 8;                     ///< Max minutes of mode runtime
+
   // [13]
   uint8_t min_temp_step : 8;                ///< Min temp allowed in mode. See #actual_temp_step.
+
   // [14]
   uint8_t max_temp_step : 8;                ///< Max temp allowed in mode. See #actual_temp_step.
 
@@ -116,25 +126,27 @@ struct BedjetStatusPacket {
   // [17]
   uint8_t ambient_temp_step : 8;            ///< Current ambient air temp. This is the coldest air the BedJet can blow. See
                                             ///< #actual_temp_step.
+
   // [18]
   uint8_t shutdown_reason : 8;              ///< The reason for the last device shutdown.
 
   // Something is not right after this point. My notification packet has an extra byte,
   // and my read packet starts with an 0x01. But my expected length is 27 and the total
-  // size of notification packet and read packet is 20 + 11 = 31. Are some bytes in the
-  // read packet some kind of framing?
+  // size of notification packet and read packet is 20 + 11 = 31. Looks like the original
+  // author make an off-by-one error in this area as well.
 
   // [19]
-  uint8_t unknown_1 : 8;                    // Unknown = 0x01
+  uint8_t unknown_1 : 8;                    // Unknown = 0x01 (0x12 in mine)
 
-  // The notification partial packet cuts off here after [19]
+  // *** The notification partial packet cuts off here after [19] ***
 
   // [20]
-  uint8_t unknown_2 : 8;                    // Unknown = 0x81
-  // [21]
-  uint8_t unknown_3 : 8;                    // Unknown = 0x01
+  uint8_t unknown_2 : 8;                    // Unknown = 0x81 (0x01 in mine)
 
-  // [22]                                   // Partial = 0x02
+  // [21]
+  uint8_t unknown_3 : 8;                    // Unknown = 0x01 (0x9A in mine)
+
+  // [22]                                   // (mine: 0x01=off, 0xF1=bio, 0x81=other
   struct {
     int unknown_1 : 1;       // 0x80
     int unknown_2 : 1;       // 0x40
@@ -146,14 +158,18 @@ struct BedjetStatusPacket {
     int unknown_7 : 1;       // 0x01
   } dual_zone_flags;                            // NOLINT(clang-diagnostic-unaligned-access)
 
-  // [23-24]
-  uint8_t unknown_4 : 8;                    // Unknown = 0x1310
-  uint8_t unknown_5 : 8;
+  // [23]
+  uint8_t unknown_4 : 8;                    // Unknown = 0x10
+
+  // [24]
+  uint8_t unknown_5 : 8;                    // Unknown = 0x12
+
   // [25]
   uint8_t unknown_6 : 8;                    // Unknown = 0x00
 
   // [26]
   uint8_t update_phase : 8;                 ///< The current status/phase of a firmware update.
+                                            ///<  0x14(20) = ??? (mine)
                                             ///<  0x18(24) = "Connection test has completed OK"
                                             ///<  0x1a(26) = "Firmware update is not needed"
 
@@ -175,10 +191,12 @@ struct BedjetStatusPacket {
 
   // [28]
   uint8_t bio_sequence_step : 8;            /// Biorhythm sequence step number
+
   // [29]
   BedjetNotification notify_code : 8;       /// See BedjetNotification
 
-  uint16_t unknown_7 : 16;                  // Unknown
+  // [30]
+  uint16_t unknown_7 : 8;                   // Unknown (mine varies, counts up/down)
 
 } __attribute__((packed));
 
