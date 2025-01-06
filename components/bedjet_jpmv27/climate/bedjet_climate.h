@@ -3,9 +3,9 @@
 #include "esphome/core/component.h"
 #include "esphome/core/defines.h"
 #include "esphome/core/hal.h"
-#include "esphome/components/bedjet/bedjet_child.h"
-#include "esphome/components/bedjet/bedjet_codec.h"
-#include "esphome/components/bedjet/bedjet_hub.h"
+#include "esphome/components/bedjet_jpmv27/bedjet_child.h"
+#include "esphome/components/bedjet_jpmv27/bedjet_codec.h"
+#include "esphome/components/bedjet_jpmv27/bedjet_hub.h"
 #include "esphome/components/climate/climate.h"
 
 #ifdef USE_ESP32
