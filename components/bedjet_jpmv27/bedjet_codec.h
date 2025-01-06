@@ -156,7 +156,7 @@ struct BedjetStatusPacket {
     int unknown_6 : 1;       // 0x04
     bool is_dual_zone : 1;   // 0x02        /// Is part of a Dual Zone configuration
     int unknown_7 : 1;       // 0x01
-  } dual_zone_flags;                            // NOLINT(clang-diagnostic-unaligned-access)
+  } __attribute__((packed)) flags;              // NOLINT(clang-diagnostic-unaligned-access)
 
   // [23]
   uint8_t unknown_4 : 8;                    // Unknown = 0x10
@@ -186,7 +186,7 @@ struct BedjetStatusPacket {
       bool units_setup : 1;        // 0x04  ///< Bit is set `1` if the device's units have been configured.
       int unknown_4 : 1;           // 0x02
       bool beeps_muted : 1;        // 0x01  ///< Bit is set `1` if the device's sound output is muted.
-    } __attribute__((packed)) flags;
+    } __attribute__((packed)) flags2;
   };
 
   // [28]
@@ -196,7 +196,8 @@ struct BedjetStatusPacket {
   BedjetNotification notify_code : 8;       /// See BedjetNotification
 
   // [30]
-  uint16_t unknown_7 : 8;                   // Unknown (mine varies, counts up/down)
+  uint8_t checksum: 8;                      // Checksum: sum of all message bytes including checksum
+                                            // mod 256 should equal zero.
 
 } __attribute__((packed));
 
@@ -242,8 +243,8 @@ class BedjetCodec {
   BedjetPacket *get_set_time_request(uint8_t hour, uint8_t minute);
   BedjetPacket *get_set_runtime_remaining_request(uint8_t hour, uint8_t minute);
 
-  bool decode_notify(const uint8_t *data, uint16_t length);
-  void decode_extra(const uint8_t *data, uint16_t length);
+  int decode_notify(const uint8_t *data, uint16_t length);
+  bool decode_extra(const uint8_t *data, uint16_t length);
   bool compare(const uint8_t *data, uint16_t length);
 
   inline bool has_status() { return this->status_packet_ != nullptr; }
