@@ -71,7 +71,6 @@ enum BedjetButton : uint8_t {
 
   // BTN_TIME_UP = 0x??
   // BTN_TIME_DOWN = 0x??
-  // BTN_10H = 0x??
 
   /// Start the M1 biorhythm/preset program
   BTN_M1 = 0x20,
