@@ -124,11 +124,10 @@ bool BedjetCodec::decode_extra(const uint8_t *data, uint16_t length) {
 
 /** Decodes the incoming status packet received on the BEDJET_STATUS_UUID.
  *
- * @return >0 if the packet was decoded and represents a complete packet; 0 if the packet was
- *         decoded and represents a "partial" packet, meaning that we need to read the status
- *         characteristic to get the rest of the data; <0 if the packet validation failed.
+ * @return `true` if the partial packet appears sane and the extra data should be read;
+ *         `false` otherwise.
  */
-int BedjetCodec::decode_notify(const uint8_t *data, uint16_t length) {
+bool BedjetCodec::decode_notify(const uint8_t *data, uint16_t length) {
   ESP_LOGV(TAG, "Received: %d bytes: %d %d %d %d", length, data[0], data[1], data[2], data[3]);
 
   if (data[1] == PACKET_FORMAT_V3_HOME && data[3] == PACKET_TYPE_STATUS) {
@@ -139,34 +138,22 @@ int BedjetCodec::decode_notify(const uint8_t *data, uint16_t length) {
     memcpy(&this->buf_, data, length);
     this->last_buffer_size_ = length;
 
-    // We can only validate the checksum once we have all the data, but we have to decide whether
-    // we have all the data based on the information we received in the maybe-partial packet:
-    // Catch-22. Apply sanity checks to the data for a rough validation.
-    if (!(this->buf_.mode < 7 && this->buf_.target_temp_step >= 38 && this->buf_.target_temp_step <= 86 &&
-        this->buf_.actual_temp_step > 1 && this->buf_.actual_temp_step <= 100 && this->buf_.ambient_temp_step > 1 &&
-        this->buf_.ambient_temp_step <= 100)) {
+    // We can only validate the checksum once we have all the data, so apply some sanity checks
+    // to detect a corrupt notification packet
+    if (!(this->buf_.is_partial && this->buf_.data_length == PACKET_LENGTH_STATUS_DATA &&
+          this->buf_.mode < 7 && this->buf_.target_temp_step >= 38 &&
+          this->buf_.target_temp_step <= 86 && this->buf_.actual_temp_step > 1 &&
+          this->buf_.actual_temp_step <= 100 && this->buf_.ambient_temp_step > 1 &&
+          this->buf_.ambient_temp_step <= 100)) {
       // Failed sanity check
       this->status_packet_ = nullptr;
       ESP_LOGW(TAG, "Received STATUS packet failed sanity checks");
-      return -1;
+      return false;
     }
 
-    if (!this->buf_.is_partial) {
-      // We have all the data, check the checksum
-      if (checkChecksum(data, length)) {
-        // and save it for the update() loop
-        this->status_packet_ = &this->buf_;
-        return 1;
-      } else {
-        this->status_packet_ = nullptr;
-        ESP_LOGW(TAG, "Received STATUS packet failed checksum check");
-        return -1;
-      }
-    } else {
-      // We only have partial data, so we punt the checksum check until later
-      this->status_packet_ = &this->buf_;
-      return 0;
-    }
+    this->status_packet_ = &this->buf_;
+    return true;
+
   } else if (data[1] == PACKET_FORMAT_DEBUG || data[3] == PACKET_TYPE_DEBUG) {
     // We don't actually know the packet format for this. Dump packets to log, in case a pattern presents itself.
     logIHexPacket("Received DEBUG packet", data, length);
@@ -175,7 +162,7 @@ int BedjetCodec::decode_notify(const uint8_t *data, uint16_t length) {
     logIHexPacket("Received UNKNOWN packet", data, length);
   }
 
-  return -1;
+  return false;
 }
 
 /** @return `true` if the new packet is meaningfully different from the last seen packet. */

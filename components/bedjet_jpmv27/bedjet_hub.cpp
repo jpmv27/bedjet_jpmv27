@@ -381,18 +381,14 @@ void BedJetHub::gattc_event_handler(esp_gattc_cb_event_t event, esp_gatt_if_t ga
         this->processing_ = true;
         ESP_LOGVV(TAG, "[%s] Decoding packet: last=%" PRId32 ", delta=%" PRId32 ", force=%s", this->get_name().c_str(),
                   this->last_notify_, delta, this->force_refresh_ ? "y" : "n");
-        int decode_result = this->codec_->decode_notify(param->notify.value, param->notify.value_len);
-
-        if (decode_result > 0) {
-          // A complete packet has been received, process it
-          this->status_packet_ready_();
-        } else if (decode_result == 0) {
-          // This means the packet was partial, so read the status characteristic to get the second part.
+        if (this->codec_->decode_notify(param->notify.value, param->notify.value_len)) {
+          // A valid-looking partial packet was received, so read the status characteristic to get the second part.
           // Ideally this will complete quickly. We won't process additional notification events until it does.
           auto status = esp_ble_gattc_read_char(this->parent_->get_gattc_if(), this->parent_->get_conn_id(),
                                                 this->char_handle_status_, ESP_GATT_AUTH_REQ_NONE);
           if (status) {
             ESP_LOGI(TAG, "[%s] Unable to read extended status packet", this->get_name().c_str());
+            this->processing_ = false;
           }
         } else {
           // Received a bad packet, wait for the next one

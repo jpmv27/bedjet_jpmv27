@@ -24,6 +24,16 @@ enum BedjetPacketType : uint8_t {
   PACKET_TYPE_DEBUG = 0x2,
 };
 
+// The expected length contained in the notification part of the STATUS packet is
+// 27, even though the total size of the notification data plus the characteristic
+// data is 20 + 11 = 31. My hypothesis is that the first four bytes will be
+// constant across all packet types and are considered a "header", with the
+// expected length reflecting only the length of the data after the header.
+enum BedjetPacketLength : uint8_t {
+  PACKET_LENGTH_HEADER = 4,
+  PACKET_LENGTH_STATUS_DATA = 27,
+};
+
 enum BedjetNotification : uint8_t {
   NOTIFY_NONE = 0,                    ///< No notification pending
   NOTIFY_FILTER = 1,                  ///< Clean Filter / Please check BedJet air filter and clean if necessary.
@@ -37,38 +47,6 @@ enum BedjetNotification : uint8_t {
 
 /** The format of a BedJet V3 status packet. */
 
-// Ubertooth capture of a notification packet
-//
-// [Data Header].......................[BLE LINK LAYER PDU]....................................[CRC]
-// flags                                                                                       |
-// |  length = 27                                                                              |
-// |  |   [L2CAP PDU]                                                                          |
-// |  |   length = 23                                                                          |
-// |  |   |  CID = 0x0004 (ATT)                                                                |
-// |  |   |  |        [ATT PDU]                                                                |
-// |  |   |  |        opcode = Handle Value Notification                                       |
-// |  |   |  |        |  handle = 0x002a (unknown)                                             |
-// |  |   |  |        |  |      [BedJet PDU]                                                   |
-// |  |   |  |        |  |      is-partial = yes                                               |
-// |  |   |  |        |  |      |  format = V3-home                                            |
-// |  |   |  |        |  |      |  |  total length = 27                                        |
-// |  |   |  |        |  |      |  |  |  type = status                                         |
-// |  |   |  |        |  |      |  |  |  |  remaining HH:MM:SS                                 |
-// |  |   |  |        |  |      |  |  |  |  |        actual temp = 20C                         |
-// |  |   |  |        |  |      |  |  |  |  |        |  target temp = 32C                      |
-// |  |   |  |        |  |      |  |  |  |  |        |  |  mode = standby                      |
-// |  |   |  |        |  |      |  |  |  |  |        |  |  |  fan speed = 60%                  |
-// |  |   |  |        |  |      |  |  |  |  |        |  |  |  |  max runtime HH:MM             |
-// |  |   |  |        |  |      |  |  |  |  |        |  |  |  |  |     min temp = 10C          |
-// |  |   |  |        |  |      |  |  |  |  |        |  |  |  |  |     |  max temp = 40C       |
-// |  |   |  |        |  |      |  |  |  |  |        |  |  |  |  |     |  |  turbo time (HH:MM?)
-// |  |   |  |        |  |      |  |  |  |  |        |  |  |  |  |     |  |  |     ambient temp = 20C
-// |  |   |  |        |  |      |  |  |  |  |        |  |  |  |  |     |  |  |     |  shutdown reason
-// |  |   |  |        |  |      |  |  |  |  |        |  |  |  |  |     |  |  |     |  |  ?     |
-// |  |   |  |        |  |      |  |  |  |  |        |  |  |  |  |     |  |  |     |  |  |     |
-// V  V   V  V        V  V      V  V  V  V  V        V  V  V  V  V     V  V  V     V  V  V     V
-// 06 1b {17 00 04 00 1b 2a 00 [01 56 1b 01 00 00 00 28 40 00 0b 00 00 14 50 00 00 28 00 12]} {db c4 95}
-
 struct BedjetStatusPacket {
   // [ 0]
   bool is_partial : 8;                      ///< `1` indicates that this is a partial packet, and more data can be read directly from the
@@ -78,9 +56,8 @@ struct BedjetStatusPacket {
                                             ///< format. BedjetPacketFormat::PACKET_FORMAT_DEBUG for debugging packets.
 
   // [ 2]
-  uint8_t expecting_length : 8;             ///< The expected total length of the status packet after merging the extra packet.
-                                            ///< (mine says 27). Perhaps the first four bytes are considered a packet header and
-                                            ///< not included in the length
+  uint8_t data_length : 8;                  ///< The length of the status packet after merging the extra packet, excluding
+                                            ///< the header. See BedJetPacketLength
 
   // [ 3]
   BedjetPacketType packet_type : 8;         ///< Typically BedjetPacketType::PACKET_TYPE_STATUS for BedJet V3 status packet.
@@ -130,15 +107,11 @@ struct BedjetStatusPacket {
   // [18]
   uint8_t shutdown_reason : 8;              ///< The reason for the last device shutdown.
 
-  // Something is not right after this point. My notification packet has an extra byte,
-  // and my read packet starts with an 0x01. But my expected length is 27 and the total
-  // size of notification packet and read packet is 20 + 11 = 31. Looks like the original
-  // author make an off-by-one error in this area as well.
-
   // [19]
   uint8_t unknown_1 : 8;                    // Unknown = 0x01 (0x12 in mine)
 
-  // *** The notification partial packet cuts off here after [19] ***
+  // *** The notification partial packet stops here. The remainder must be read explicitly
+  // *** from the characteristic
 
   // [20]
   uint8_t unknown_2 : 8;                    // Unknown = 0x81 (0x01 in mine)
@@ -156,7 +129,7 @@ struct BedjetStatusPacket {
     int unknown_6 : 1;       // 0x04
     bool is_dual_zone : 1;   // 0x02        /// Is part of a Dual Zone configuration
     int unknown_7 : 1;       // 0x01
-  } __attribute__((packed)) flags;              // NOLINT(clang-diagnostic-unaligned-access)
+  } __attribute__((packed)) flags1;             // NOLINT(clang-diagnostic-unaligned-access)
 
   // [23]
   uint8_t unknown_4 : 8;                    // Unknown = 0x10
@@ -174,20 +147,16 @@ struct BedjetStatusPacket {
                                             ///<  0x1a(26) = "Firmware update is not needed"
 
   // [27]
-  union {
-    uint8_t flags_packed;
-    struct {
-      /* uint8_t */
-      int unknown_1 : 1;           // 0x80
-      int unknown_2 : 1;           // 0x40
-      bool conn_test_passed : 1;   // 0x20  ///< Bit is set `1` if the last connection test passed.
-      bool leds_enabled : 1;       // 0x10  ///< Bit is set `1` if the LEDs on the device are enabled.
-      int unknown_3 : 1;           // 0x08
-      bool units_setup : 1;        // 0x04  ///< Bit is set `1` if the device's units have been configured.
-      int unknown_4 : 1;           // 0x02
-      bool beeps_muted : 1;        // 0x01  ///< Bit is set `1` if the device's sound output is muted.
-    } __attribute__((packed)) flags2;
-  };
+  struct {
+    int unknown_1 : 1;           // 0x80
+    int unknown_2 : 1;           // 0x40
+    bool conn_test_passed : 1;   // 0x20    ///< Bit is set `1` if the last connection test passed.
+    bool leds_enabled : 1;       // 0x10    ///< Bit is set `1` if the LEDs on the device are enabled.
+    int unknown_3 : 1;           // 0x08
+    bool units_setup : 1;        // 0x04    ///< Bit is set `1` if the device's units have been configured.
+    int unknown_4 : 1;           // 0x02
+    bool beeps_muted : 1;        // 0x01    ///< Bit is set `1` if the device's sound output is muted.
+  } __attribute__((packed)) flags2;
 
   // [28]
   uint8_t bio_sequence_step : 8;            /// Biorhythm sequence step number
@@ -243,7 +212,7 @@ class BedjetCodec {
   BedjetPacket *get_set_time_request(uint8_t hour, uint8_t minute);
   BedjetPacket *get_set_runtime_remaining_request(uint8_t hour, uint8_t minute);
 
-  int decode_notify(const uint8_t *data, uint16_t length);
+  bool decode_notify(const uint8_t *data, uint16_t length);
   bool decode_extra(const uint8_t *data, uint16_t length);
   bool compare(const uint8_t *data, uint16_t length);
 
