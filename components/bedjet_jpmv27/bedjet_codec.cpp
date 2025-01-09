@@ -7,6 +7,7 @@ namespace bedjet {
 
 /// Log the contents of a variable length packet as hex bytes
 void logIHexPacket(const char* label, const uint8_t* buf, size_t length) {
+#ifdef ESPHOME_LOG_HAS_INFO
     char output[(length * 3) + 1];
 
     size_t offset = 0;
@@ -15,6 +16,7 @@ void logIHexPacket(const char* label, const uint8_t* buf, size_t length) {
     }
 
 	ESP_LOGI(TAG, "%s (%d bytes): %s", label, length, output);
+#endif
 }
 
 /// Sum-up all the message bytes, mod 256. Should add up to zero.
@@ -45,7 +47,7 @@ BedjetPacket *BedjetCodec::clean_packet_() {
   for (int i = this->packet_.data_length; i < 2; i++) {
     this->packet_.data[i] = '\0';
   }
-  ESP_LOGV(TAG, "Created packet: %02X, %02X %02X", this->packet_.command, this->packet_.data[0], this->packet_.data[1]);
+  ESP_LOGI(TAG, "Created packet: %02X, %02X %02X", this->packet_.command, this->packet_.data[0], this->packet_.data[1]);
   return &this->packet_;
 }
 
@@ -96,7 +98,6 @@ BedjetPacket *BedjetCodec::get_set_runtime_remaining_request(const uint8_t hour,
  * @return `true` if the total message has a valid checksum; `false` otherwise
  */
 bool BedjetCodec::decode_extra(const uint8_t *data, uint16_t length) {
-  logIHexPacket("Read extra bytes", data, length);
   uint8_t offset = this->last_buffer_size_;
 
   if (offset == 0) {
@@ -113,9 +114,11 @@ bool BedjetCodec::decode_extra(const uint8_t *data, uint16_t length) {
   // Looks good so far. Combine the two packets together so we can check the checksum
   memcpy(((uint8_t *) (&this->buf_)) + offset, data, length);
 
+  logIHexPacket("Complete STATUS packet", (uint8_t *) (&this->buf_), offset + length);
+
   if (!checkChecksum((uint8_t *) (&this->buf_), offset + length)) {
     this->status_packet_ = nullptr;
-    ESP_LOGW(TAG, "Received STATUS packet failed (including extra data) checksum check");
+    ESP_LOGW(TAG, "Complete STATUS packet failed checksum check");
     return false;
   }
 
@@ -128,10 +131,7 @@ bool BedjetCodec::decode_extra(const uint8_t *data, uint16_t length) {
  *         `false` otherwise.
  */
 bool BedjetCodec::decode_notify(const uint8_t *data, uint16_t length) {
-  ESP_LOGV(TAG, "Received: %d bytes: %d %d %d %d", length, data[0], data[1], data[2], data[3]);
-
   if (data[1] == PACKET_FORMAT_V3_HOME && data[3] == PACKET_TYPE_STATUS) {
-    logIHexPacket("Received STATUS packet", data, length);
     // Clear old buffer
     memset(&this->buf_, 0, sizeof(BedjetStatusPacket));
     // Copy new data into buffer
@@ -148,6 +148,7 @@ bool BedjetCodec::decode_notify(const uint8_t *data, uint16_t length) {
       // Failed sanity check
       this->status_packet_ = nullptr;
       ESP_LOGW(TAG, "Received STATUS packet failed sanity checks");
+      logIHexPacket("Received STATUS packet", data, length);
       return false;
     }
 
