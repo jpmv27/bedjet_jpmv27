@@ -45,22 +45,6 @@ CONFIG_SCHEMA = (
         }
     )
     .extend(cv.polling_component_schema("60s"))
-    .extend(
-        # TODO: remove compat layer.
-        {
-            cv.Optional(ble_client.CONF_BLE_CLIENT_ID): cv.invalid(
-                "The 'ble_client_id' option has been removed. Please migrate "
-                "to the new `bedjet_id` option in the `bedjet` component.\n"
-                "See https://esphome.io/components/climate/bedjet.html"
-            ),
-            cv.Optional(CONF_TIME_ID): cv.invalid(
-                "The 'time_id' option has been moved to the `bedjet` component."
-            ),
-            cv.Optional(CONF_RECEIVE_TIMEOUT): cv.invalid(
-                "The 'receive_timeout' option has been moved to the `bedjet` component."
-            ),
-        }
-    )
     .extend(BEDJET_CLIENT_SCHEMA)
 )
 

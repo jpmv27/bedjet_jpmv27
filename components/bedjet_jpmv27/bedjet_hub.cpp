@@ -229,7 +229,7 @@ void BedJetHub::gattc_event_handler(esp_gattc_cb_event_t event, esp_gatt_if_t ga
   switch (event) {
     case ESP_GATTC_DISCONNECT_EVT: {
       ESP_LOGV(TAG, "Disconnected: reason=%d", param->disconnect.reason);
-      this->status_set_warning();
+      this->status_set_warning("Disconnected");
       this->dispatch_state_(false);
       break;
     }
@@ -251,7 +251,7 @@ void BedJetHub::gattc_event_handler(esp_gattc_cb_event_t event, esp_gatt_if_t ga
       } else {
         ESP_LOGW(TAG, "[%s] Failed discovering service characteristics.", this->get_name().c_str());
         this->parent()->set_enabled(false);
-        this->status_set_warning();
+        this->status_set_warning("Failed discovering service characteristics");
         this->dispatch_state_(false);
       }
       break;

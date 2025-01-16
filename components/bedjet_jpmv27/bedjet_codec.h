@@ -108,43 +108,44 @@ struct BedjetStatusPacket {
   uint8_t shutdown_reason : 8;              ///< The reason for the last device shutdown.
 
   // [19]
-  uint8_t unknown_1 : 8;                    // Unknown = 0x01 (0x12 in mine)
+  uint8_t unknown_1 : 8;                    // Unknown = 0x01 (always 0x12 in mine)
 
   // *** The notification partial packet stops here. The remainder must be read explicitly
   // *** from the characteristic
 
   // [20]
-  uint8_t unknown_2 : 8;                    // Unknown = 0x81 (0x01 in mine)
+  uint8_t unknown_2 : 8;                    // Unknown = 0x81 (always 0x01 in mine)
 
   // [21]
-  uint8_t unknown_3 : 8;                    // Unknown = 0x01 (0x9A in mine)
+  uint8_t unknown_3 : 8;                    // Unknown = 0x01 (always 0x9A in mine)
 
-  // [22]                                   // (mine: 0x01=off, 0xF1=bio, 0x81=other
+  // [22]
   struct {
-    int unknown_1 : 1;       // 0x80
-    int unknown_2 : 1;       // 0x40
-    int unknown_3 : 1;       // 0x20
-    int unknown_4 : 1;       // 0x10
+    int unknown_1 : 1;       // 0x80        /// TBD have seen 0x1X, 0x8X and 0xFX
+    int unknown_2 : 1;       // 0x40        /// TBD
+    int unknown_3 : 1;       // 0x20        /// TBD
+    int unknown_4 : 1;       // 0x10        /// TBD
     int unknown_5 : 1;       // 0x08
     int unknown_6 : 1;       // 0x04
-    bool is_dual_zone : 1;   // 0x02        /// Is part of a Dual Zone configuration
-    int unknown_7 : 1;       // 0x01
-  } __attribute__((packed)) flags1;             // NOLINT(clang-diagnostic-unaligned-access)
+    bool is_dual_zone : 1;   // 0x02        /// Is part of a Dual Zone configuration or low-power mode enabled
+    int unknown_7 : 1;       // 0x01        /// TBD always on
+  } __attribute__((packed)) flags_1;             // NOLINT(clang-diagnostic-unaligned-access)
 
   // [23]
-  uint8_t unknown_4 : 8;                    // Unknown = 0x10
+  uint8_t unknown_4 : 8;                    // Unknown = 0x10 (have seen 0x00, 0x10, 0x11, 0x18)
 
   // [24]
-  uint8_t unknown_5 : 8;                    // Unknown = 0x12
+  uint8_t current_hr : 8;                   // Hour part of current time
 
   // [25]
-  uint8_t unknown_6 : 8;                    // Unknown = 0x00
+  uint8_t unknown_6 : 8;                    // Unknown = 0x00 (always 0x00 in mine)
 
   // [26]
   uint8_t update_phase : 8;                 ///< The current status/phase of a firmware update.
-                                            ///<  0x14(20) = ??? (mine)
+                                            ///<  0x14(20) = TBD (seen in mine)
                                             ///<  0x18(24) = "Connection test has completed OK"
                                             ///<  0x1a(26) = "Firmware update is not needed"
+                                            ///<  0x1C(28) = TBD (seen in mine)
 
   // [27]
   struct {
@@ -152,11 +153,11 @@ struct BedjetStatusPacket {
     int unknown_2 : 1;           // 0x40
     bool conn_test_passed : 1;   // 0x20    ///< Bit is set `1` if the last connection test passed.
     bool leds_enabled : 1;       // 0x10    ///< Bit is set `1` if the LEDs on the device are enabled.
-    int unknown_3 : 1;           // 0x08
-    bool units_setup : 1;        // 0x04    ///< Bit is set `1` if the device's units have been configured.
+    int low_power : 1;           // 0x08    ///< Bit is set `1` if low-power mode is enabled.
+    bool config_done : 1;        // 0x04    ///< Bit is set `1` if the device has been configured.
     int unknown_4 : 1;           // 0x02
     bool beeps_muted : 1;        // 0x01    ///< Bit is set `1` if the device's sound output is muted.
-  } __attribute__((packed)) flags2;
+  } __attribute__((packed)) flags_2;
 
   // [28]
   uint8_t bio_sequence_step : 8;            /// Biorhythm sequence step number

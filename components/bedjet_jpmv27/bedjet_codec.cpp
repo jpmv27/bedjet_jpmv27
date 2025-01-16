@@ -114,12 +114,13 @@ bool BedjetCodec::decode_extra(const uint8_t *data, uint16_t length) {
   // Looks good so far. Combine the two packets together so we can check the checksum
   memcpy(((uint8_t *) (&this->buf_)) + offset, data, length);
 
-  logIHexPacket("Complete STATUS packet", (uint8_t *) (&this->buf_), offset + length);
-
   if (!checkChecksum((uint8_t *) (&this->buf_), offset + length)) {
     this->status_packet_ = nullptr;
     ESP_LOGW(TAG, "Complete STATUS packet failed checksum check");
+    logIHexPacket("Bad complete STATUS packet", (uint8_t *) (&this->buf_), offset + length);
     return false;
+  } else {
+    logIHexPacket("Good complete STATUS packet", (uint8_t *) (&this->buf_), offset + length);
   }
 
   return true;
@@ -147,8 +148,8 @@ bool BedjetCodec::decode_notify(const uint8_t *data, uint16_t length) {
           this->buf_.ambient_temp_step <= 100)) {
       // Failed sanity check
       this->status_packet_ = nullptr;
-      ESP_LOGW(TAG, "Received STATUS packet failed sanity checks");
-      logIHexPacket("Received STATUS packet", data, length);
+      ESP_LOGW(TAG, "Partial STATUS packet failed sanity checks");
+      logIHexPacket("Bad partial STATUS packet", data, length);
       return false;
     }
 
@@ -159,8 +160,8 @@ bool BedjetCodec::decode_notify(const uint8_t *data, uint16_t length) {
     // We don't actually know the packet format for this. Dump packets to log, in case a pattern presents itself.
     logIHexPacket("Received DEBUG packet", data, length);
   } else {
-    // TODO: log a warning if we detect that we connected to a non-V3 device.
-    logIHexPacket("Received UNKNOWN packet", data, length);
+    ESP_LOGW(TAG, "Received unknown packet");
+    logIHexPacket("Received unknown packet", data, length);
   }
 
   return false;
