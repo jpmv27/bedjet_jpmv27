@@ -105,7 +105,7 @@ struct BedjetStatusPacket {
                                             ///< #actual_temp_step.
 
   // [18]
-  uint8_t shutdown_reason : 8;              ///< The reason for the last device shutdown.
+  uint8_t shutdown_reason : 8;              ///< The reason for the last device shutdown. (always 0x00 in mine)
 
   // [19]
   uint8_t unknown_1 : 8;                    // Unknown = 0x01 (always 0x12 in mine)
@@ -121,18 +121,18 @@ struct BedjetStatusPacket {
 
   // [22]
   struct {
-    int unknown_1 : 1;       // 0x80        /// TBD have seen 0x1X, 0x8X and 0xFX
+    int unknown_1 : 1;       // 0x80        /// TBD have seen 0x0X, 0x1X, 0x8X and 0xFX
     int unknown_2 : 1;       // 0x40        /// TBD
     int unknown_3 : 1;       // 0x20        /// TBD
     int unknown_4 : 1;       // 0x10        /// TBD
     int unknown_5 : 1;       // 0x08
     int unknown_6 : 1;       // 0x04
     bool is_dual_zone : 1;   // 0x02        /// Is part of a Dual Zone configuration or low-power mode enabled
-    int unknown_7 : 1;       // 0x01        /// TBD always on
+    int unknown_7 : 1;       // 0x01        /// TBD (always on in mine)
   } __attribute__((packed)) flags_1;             // NOLINT(clang-diagnostic-unaligned-access)
 
   // [23]
-  uint8_t unknown_4 : 8;                    // Unknown = 0x10 (have seen 0x00, 0x10, 0x11, 0x18)
+  uint8_t unknown_4 : 8;                    // Unknown = 0x10 (have seen 0x00, 0x08, 0x10, 0x11, 0x18)
 
   // [24]
   uint8_t current_hr : 8;                   // Hour part of current time
