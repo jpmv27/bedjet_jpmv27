@@ -382,6 +382,8 @@ void BedJetHub::gattc_event_handler(esp_gattc_cb_event_t event, esp_gatt_if_t ga
         ESP_LOGVV(TAG, "[%s] Decoding packet: last=%" PRId32 ", delta=%" PRId32 ", force=%s", this->get_name().c_str(),
                   this->last_notify_, delta, this->force_refresh_ ? "y" : "n");
         if (this->codec_->decode_notify(param->notify.value, param->notify.value_len)) {
+          this->process_onupdate_triggers_();
+
           // A valid-looking partial packet was received, so read the status characteristic to get the second part.
           // Ideally this will complete quickly. We won't process additional notification events until it does.
           auto status = esp_ble_gattc_read_char(this->parent_->get_gattc_if(), this->parent_->get_conn_id(),
@@ -400,6 +402,11 @@ void BedJetHub::gattc_event_handler(esp_gattc_cb_event_t event, esp_gatt_if_t ga
     default:
       ESP_LOGVV(TAG, "[%s] gattc unhandled event: enum=%d", this->get_name().c_str(), event);
       break;
+  }
+}
+void BedJetHub::process_onupdate_triggers_() {
+  for (auto *trigger : this->triggers_onupdate_) {
+    trigger->process();
   }
 }
 

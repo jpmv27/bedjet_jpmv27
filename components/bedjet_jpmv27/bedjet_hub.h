@@ -8,6 +8,7 @@
 #include "esphome/core/hal.h"
 #include "bedjet_child.h"
 #include "bedjet_codec.h"
+#include "bedjet_automation.h"
 
 #include <vector>
 
@@ -177,6 +178,8 @@ class BedJetHub : public esphome::ble_client::BLEClientNode, public PollingCompo
   /** Register a `BedJetClient` child component. */
   void register_child(BedJetClient *obj);
 
+  void register_onupdate_trigger(UpdateTrigger *trig) { triggers_onupdate_.push_back(trig); }
+
   /** Set the status timeout.
    *
    * This is the max time to wait for a status update before the connection is presumed unusable.
@@ -251,6 +254,9 @@ class BedJetHub : public esphome::ble_client::BLEClientNode, public PollingCompo
   uint16_t config_descr_status_;
 
   uint8_t write_notify_config_descriptor_(bool enable);
+
+  void process_onupdate_triggers_();
+  std::vector<UpdateTrigger *> triggers_onupdate_;
 };
 
 }  // namespace bedjet

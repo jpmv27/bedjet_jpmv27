@@ -1,10 +1,13 @@
+from esphome import automation
 import esphome.codegen as cg
 import esphome.config_validation as cv
 from esphome.components import ble_client, time
 from esphome.const import (
     CONF_ID,
+    CONF_ON_UPDATE,
     CONF_RECEIVE_TIMEOUT,
     CONF_TIME_ID,
+    CONF_TRIGGER_ID,
 )
 
 CODEOWNERS = ["@jhansche"]
@@ -15,6 +18,9 @@ CONF_BEDJET_ID = "bedjet_id"
 bedjet_ns = cg.esphome_ns.namespace("bedjet")
 BedJetHub = bedjet_ns.class_("BedJetHub", ble_client.BLEClientNode, cg.PollingComponent)
 
+# Triggers
+UpdateTrigger =bedjet_ns.class_("UpdateTrigger", automation.Trigger.template())
+
 CONFIG_SCHEMA = (
     cv.COMPONENT_SCHEMA.extend(
         {
@@ -23,6 +29,12 @@ CONFIG_SCHEMA = (
             cv.Optional(
                 CONF_RECEIVE_TIMEOUT, default="0s"
             ): cv.positive_time_period_milliseconds,
+            cv.Optional(CONF_ON_UPDATE): automation.validate_automation(
+                {
+                    cv.GenerateID(CONF_TRIGGER_ID): cv.declare_id(UpdateTrigger),
+                }
+            ),
+
         }
     )
     .extend(ble_client.BLE_CLIENT_SCHEMA)
@@ -50,3 +62,8 @@ async def to_code(config):
         cg.add(var.set_time_id(time_))
     if (receive_timeout := config.get(CONF_RECEIVE_TIMEOUT)) is not None:
         cg.add(var.set_status_timeout(receive_timeout))
+    for conf in config.get(CONF_ON_UPDATE, []):
+        trigger = cg.new_Pvariable(conf[CONF_TRIGGER_ID])
+        cg.add(var.register_onupdate_trigger(trigger))
+        await automation.build_automation(trigger, [], conf)
+
