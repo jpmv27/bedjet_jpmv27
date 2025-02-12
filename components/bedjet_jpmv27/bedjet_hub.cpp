@@ -459,10 +459,8 @@ void BedJetHub::send_local_time() {
 
 void BedJetHub::setup_time_() {
   if (this->time_id_ != nullptr) {
-#if 0 // Allow manual tine-setting but disable automatic time sync
     this->send_local_time();
     this->time_id_->add_on_time_sync_callback([this] { this->send_local_time(); });
-#endif
   } else {
     ESP_LOGI(TAG, "`time_id` is not configured: will not sync BedJet clock.");
   }
@@ -470,17 +468,17 @@ void BedJetHub::setup_time_() {
 #endif
 
 void BedJetHub::set_clock(uint8_t hour, uint8_t minute) {
-  ESP_LOGW(TAG, "Setting the clock on the BedJet can cause it to become unstable or unresponsive");
-
   if (!this->is_connected()) {
     ESP_LOGV(TAG, "[%s] Not connected, cannot send time.", this->get_name().c_str());
     return;
   }
 
+  ESP_LOGW(TAG, "Setting the clock on the BedJet can cause it to become unstable or unresponsive");
+
   BedjetPacket *pkt = this->codec_->get_set_time_request(hour, minute);
   auto status = this->write_bedjet_packet_(pkt);
   if (status) {
-    ESP_LOGW(TAG, "Failed setting BedJet clock: %d", status);
+    ESP_LOGE(TAG, "Failed setting BedJet clock: %d", status);
   } else {
     ESP_LOGI(TAG, "[%s] BedJet clock set to: %d:%02d", this->get_name().c_str(), hour, minute);
   }
