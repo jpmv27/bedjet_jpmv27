@@ -331,9 +331,7 @@ bool BedJetClimate::update_status_() {
 
   if (this->is_valid_()) {
     // TODO: only if state changed?
-    //       But if in warning status, you have to clear warning regardless.
     this->publish_state();
-    this->status_clear_warning();
     return true;
   }
 
