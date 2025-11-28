@@ -19,11 +19,7 @@ DEPENDENCIES = ["bedjet_jpmv27"]
 BedJetFan = bedjet_ns.class_("BedJetFan", fan.Fan, cg.PollingComponent)
 
 CONFIG_SCHEMA = (
-    fan.FAN_SCHEMA.extend(
-        {
-            cv.GenerateID(): cv.declare_id(BedJetFan),
-        }
-    )
+    fan.fan_schema(BedJetFan)
     .extend(cv.polling_component_schema("60s"))
     .extend(BEDJET_CLIENT_SCHEMA)
 )

@@ -33,7 +33,8 @@ BEDJET_TEMPERATURE_SOURCES = {
 }
 
 CONFIG_SCHEMA = (
-    climate.CLIMATE_SCHEMA.extend(
+    climate.climate_schema(BedJetClimate)
+    .extend(
         {
             cv.GenerateID(): cv.declare_id(BedJetClimate),
             cv.Optional(CONF_HEAT_MODE, default="heat"): cv.enum(
